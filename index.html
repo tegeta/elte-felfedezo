@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="initial-scale=1.0" />        
+        <title></title>
+        <script src="jsQR.js"></script>
+        <style>
+            html, body { 
+                height: 100%; margin: 0;
+                font-family: sans;
+            }
+            #content {
+                height: 100%;
+                position: relative; 
+                overflow: hidden;
+            }
+            #qrrb {
+                position: absolute;
+                top: 0; height: 10mm; width: 100%;
+                font-size: 7mm;
+            }
+            #msg {
+                position: absolute;
+                bottom: 0; height: 10mm; width: 100%;
+                text-align: center;
+                background: lightblue;
+                margin: auto auto auto auto;
+            }
+            #keptarto {
+                position: absolute;
+                top: 10mm; bottom: 10mm; width: 100%;
+                text-align: center;
+                background: yellow;
+            }
+            #kep {
+                position: absolute;
+                height: 100%; width: 100%;
+            }
+            #fpimg {
+                position: absolute; top: 50%; left: 50%;
+                transform: translate(-50%,-50%);
+                max-height: 100%;
+                max-width: 100%;
+            }
+            #rc {
+                position: absolute; top: 50%; left: 50%;
+                transform: translate(-50%,-50%);                 
+            }
+            .rect {
+                position: absolute;
+                box-sizing: border-box;
+                border: solid 2px pink;
+                background: rgba(255,255,255,.8); 
+                background-size: 100% 100%;
+            } 
+            #qrread {
+                position: fixed;
+                left: 50%; top: 50%;
+                transform: translate(-50%,-50%);
+                background: #fff;
+                padding: 10px;
+                border: solid 1px blue;
+                border-radius: 10px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="content">
+            <input type="button" id="qrrb" value="Kód beolvasása" onclick="read()" />
+            <div id="msg"></div>
+            <div id="keptarto">
+                <div id="kep">
+                    <img id="fpimg" src="fp.jpg" />
+                    <div id="rc" />
+                </div>
+            </div>
+        </div>
+        <div id="qrread" hidden>
+            <canvas id="vidcanvas" hidden></canvas>
+            <div id="output" hidden>
+                <div id="outputMessage">Nincs QR kód...</div>
+                <div hidden><span id="outputData"></span></div>
+            </div> 
+            <input type="button" value="Bezár" onclick="stopRead()" />
+        </div>
+        <script>
+            const msgDiv=document.querySelector('#msg');
+            function msg(txt) {
+                msgDiv.textContent=txt;
+                if (txt!='') {
+                    setTimeout("msgDiv.style.background=''",1000);
+                    msgDiv.style.background='pink';
+                }
+            }
+            const kep=document.querySelector('#kep');
+            const keptarto=document.querySelector('#keptarto');
+            const rcDiv=document.querySelector('#rc');
+            const fpimg=document.querySelector('#fpimg');
+            const qrread=document.querySelector('#qrread');
+            // set kep's and rotation if necessary. then #rc copies fpimg's size
+            function resize() {
+                let ih=innerHeight, iw=innerWidth;
+                if (ih>iw) {
+                    let oh=keptarto.clientHeight, ow=keptarto.clientWidth;
+                    kep.style.width=oh+'px';
+                    kep.style.height=ow+'px';
+                    kep.style.transform='rotate(-90deg)';
+                    kep.style.transformOrigin='top left';
+                    kep.style.top='100%';
+                }
+                else {
+                    kep.style.width='';
+                    kep.style.height='';
+                    kep.style.transform='';
+                    kep.style.transformOrigin='';
+                    kep.style.top='';
+                }
+                rcDiv.style.width=fpimg.width+'px';
+                rcDiv.style.height=fpimg.height+'px';
+            }
+            window.onresize=resize;
+            document.body.onload=resize;
+            //
+            let parts=[];
+            let cn=document.createElement('canvas');
+            cn.width=1302;cn.height=943;
+            let ctx=cn.getContext('2d');
+            let img=new Image();
+            img.onload=e=>{
+                ctx.drawImage(img,0,0);
+                fetch('rects.txt').then(r=>r.text()).then(d=>{
+                    let rc=d.split('\r\n');
+                    for (let i in rc) {
+                        c=rc[i].split(',');
+                        let l=c[0]/2, t=943-c[3]/2, w=(c[2]-c[0])/2, h=(c[3]-c[1])/2;
+                        let d=document.createElement('div');
+                        d.className='rect';
+                        d.style.top=t/9.43+'%'; d.style.left=l/13.02+'%'; d.style.width=w/13.02+'%'; d.style.height=h/9.43+'%';
+                        d.id=i;
+                        rcDiv.appendChild(d);
+                        let imd=ctx.getImageData(l,t,w,h);
+                        let c2=document.createElement('canvas');
+                        c2.width=w;c2.height=h;
+                        c2.getContext('2d').putImageData(imd,0,0);
+                        let src=c2.toDataURL();
+                        parts.push({im:src,l:l,t:t,w:w,h:h});
+                    }
+                });
+            }
+            img.src='ln.jpg';
+
+            video = document.createElement("video");
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
+              vidstream=video.srcObject = stream;
+              video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+              video.play();
+              
+            });
+            
+            function read() {
+                qrread.hidden=false;
+                var canvas = document.querySelector('#vidcanvas');
+                var ct=canvas.getContext('2d');
+                var outputContainer = document.getElementById("output");
+                var outputMessage = document.getElementById("outputMessage");
+                var outputData = document.getElementById("outputData");           
+            
+                var width = 320;    // We will scale the photo width to this
+                var height = 0;     // This will be computed based on the input stream
+                var streaming = false;
+                
+                //video.play();
+                requestAnimationFrame(tick);
+                
+                function drawLine(begin, end, color) {
+                  ct.beginPath();
+                  ct.moveTo(begin.x, begin.y);
+                  ct.lineTo(end.x, end.y);
+                  ct.lineWidth = 4;
+                  ct.strokeStyle = color;
+                  ct.stroke();
+                }           
+                function tick() {
+                  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.hidden = false;
+                    outputContainer.hidden = false;
+
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    ct.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    var imageData = ct.getImageData(0, 0, canvas.width, canvas.height);
+                    var code = jsQR(imageData.data, imageData.width, imageData.height, {
+                      inversionAttempts: "dontInvert",
+                    });
+                    if (code) {
+                        drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
+                        drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
+                        drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
+                        drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
+                        outputMessage.hidden = true;
+                        outputData.parentElement.hidden = false;
+                        //outputData.innerText = code.data;
+                        if (code.data.startsWith('tegetabor')) {
+                            stopRead();
+                            msg('Jelöld meg a térképen, hol vagy most');
+                            lerakando=parseInt(code.data.substr(10));
+                            rcDiv.onclick=lerak;
+                        }
+                    } else {
+                      outputMessage.hidden = false;
+                      outputData.parentElement.hidden = true;
+                    }
+                  }
+                  requestAnimationFrame(tick);
+                }
+            }
+            
+            function stopRead() {
+                qrread.hidden=true;
+                //video.remove();
+                /*vidstream.getTracks().forEach(function(track) {
+                  track.stop();
+                });   */             
+            }
+            function lerak(e) {
+                let d=e.target;
+                //console.log(d);
+                let i=d.id; 
+                d.style.backgroundImage='url('+parts[lerakando].im+')';
+                rcDiv.onclick=null;
+                msg('');
+            }
+        </script>
+    </body>
+</html>
