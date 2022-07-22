@@ -14,6 +14,7 @@
                 height: 100%;
                 position: relative; 
                 overflow: hidden;
+                background-image: linear-gradient(#9ac3e8, #fff, #45ac3d);
             }
             #qrrb {
                 position: absolute;
@@ -31,7 +32,6 @@
                 position: absolute;
                 top: 10mm; bottom: 10mm; width: 100%;
                 text-align: center;
-                background: yellow;
             }
             #kep {
                 position: absolute;
@@ -50,10 +50,28 @@
             .rect {
                 position: absolute;
                 box-sizing: border-box;
-                border: solid 2px pink;
-                background: rgba(255,255,255,.8); 
+                /*border: solid 2px pink;*/
+                /*background: rgba(255,255,255,.8); */
                 background-size: 100% 100%;
             } 
+            .icon {
+                position: absolute;
+                width: 10mm;
+                z-index: 100;
+                transform: translate(-50%,-50%);
+                cursor: pointer;
+            }
+            .icon:hover {
+                border: solid .5mm indigo;
+            }
+            .turned .icon {
+                transform: translate(-50%,-50%) rotate(90deg);
+                border-radius: 1mm;
+                /*transform-origin: center center;*/
+            }
+            .found {
+                border: solid 1mm green;
+            }
             #qrread {
                 position: fixed;
                 left: 50%; top: 50%;
@@ -64,6 +82,11 @@
                 border-radius: 10px;
                 text-align: center;
             }
+            @keyframes wrong {
+                from { border: solid 2mm red; }
+                to { border: none; }
+            }
+            
         </style>
     </head>
     <body>
@@ -72,8 +95,9 @@
             <div id="msg"></div>
             <div id="keptarto">
                 <div id="kep">
-                    <img id="fpimg" src="fp.jpg" />
+                    <img id="fpimg" src="fp.png" />
                     <div id="rc" />
+                    <!--div id="icons" /-->
                 </div>
             </div>
         </div>
@@ -107,6 +131,7 @@
                     kep.style.width=oh+'px';
                     kep.style.height=ow+'px';
                     kep.style.transform='rotate(-90deg)';
+                    kep.classList.add('turned');
                     kep.style.transformOrigin='top left';
                     kep.style.top='100%';
                 }
@@ -114,6 +139,7 @@
                     kep.style.width='';
                     kep.style.height='';
                     kep.style.transform='';
+                    kep.classList.remove('turned');
                     kep.style.transformOrigin='';
                     kep.style.top='';
                 }
@@ -130,6 +156,7 @@
             let img=new Image();
             img.onload=e=>{
                 ctx.drawImage(img,0,0);
+                // read objects data
                 fetch('rects.txt').then(r=>r.text()).then(d=>{
                     let rc=d.split('\r\n');
                     for (let i in rc) {
@@ -138,8 +165,17 @@
                         let d=document.createElement('div');
                         d.className='rect';
                         d.style.top=t/9.43+'%'; d.style.left=l/13.02+'%'; d.style.width=w/13.02+'%'; d.style.height=h/9.43+'%';
-                        d.id=i;
+                        d.id='d'+i;
                         rcDiv.appendChild(d);
+                        if (c.length>4) {
+                            // we got icons
+                            let it=943-c[5]/2, il=c[4]/2;
+                            let im=document.createElement('img');
+                            im.className='icon';
+                            im.style.top=it/9.43+'%'; im.style.left=il/13.02+'%';
+                            im.src='img/'+c[6]+'.jpg'; im.id=i;
+                            rcDiv.appendChild(im);
+                        }
                         let imd=ctx.getImageData(l,t,w,h);
                         let c2=document.createElement('canvas');
                         c2.width=w;c2.height=h;
@@ -171,17 +207,18 @@
                 var height = 0;     // This will be computed based on the input stream
                 var streaming = false;
                 
-                //video.play();
                 requestAnimationFrame(tick);
                 
-                function drawLine(begin, end, color) {
-                  ct.beginPath();
-                  ct.moveTo(begin.x, begin.y);
-                  ct.lineTo(end.x, end.y);
-                  ct.lineWidth = 4;
-                  ct.strokeStyle = color;
-                  ct.stroke();
-                }           
+                function drawBox(l) {
+                    ct.beginPath();
+                    ct.moveTo(l.topLeftCorner.x, l.topLeftCorner.y);
+                    ct.lineTo(l.topRightCorner.x, l.topRightCorner.y);
+                    ct.lineTo(l.bottomRightCorner.x, l.bottomRightCorner.y);
+                    ct.lineTo(l.bottomLeftCorner.x, l.bottomLeftCorner.y);
+                    ct.lineTo(l.topLeftCorner.x, l.topLeftCorner.y);
+                    ct.lineWidth = 4; ct.strokeStyle = 'red';
+                    ct.stroke();
+                }
                 function tick() {
                   if (video.readyState === video.HAVE_ENOUGH_DATA) {
                     canvas.hidden = false;
@@ -195,10 +232,11 @@
                       inversionAttempts: "dontInvert",
                     });
                     if (code) {
-                        drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
+                        drawBox(code.location);
+                        /*drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
                         drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
                         drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
-                        drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
+                        drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");*/
                         outputMessage.hidden = true;
                         outputData.parentElement.hidden = false;
                         //outputData.innerText = code.data;
@@ -225,12 +263,22 @@
                 });   */             
             }
             function lerak(e) {
-                let d=e.target;
-                //console.log(d);
-                let i=d.id; 
-                d.style.backgroundImage='url('+parts[lerakando].im+')';
-                rcDiv.onclick=null;
-                msg('');
+                let t=e.target;
+                if (t.id==lerakando) {
+                    // found
+                    let i=t.id; 
+                    t.classList.add('found');
+                    let d=document.querySelector('#d'+i);
+                    console.log(d);
+                    d.style.backgroundImage='url('+parts[lerakando].im+')';
+                    rcDiv.onclick=null;
+                    msg('');
+                }
+                else {
+                    // wrong one found
+                    t.style.animationDuration='2s';
+                    t.style.animationName='wrong';
+                }
             }
         </script>
     </body>
