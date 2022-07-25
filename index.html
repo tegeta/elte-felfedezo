@@ -16,6 +16,20 @@
                 overflow: hidden;
                 background-image: linear-gradient(#9ac3e8, #fff, #45ac3d);
             }
+            #fscb {
+                position: absolute;
+                top: 0; left:0; height: 8mm; width: 8mm; 
+                background-image: url(img/fsc.png);
+                background-size: 90% 90%;
+                background-position: center;
+                background-repeat: no-repeat;
+                font-size: 7mm;
+            }
+            
+            :fullscreen #fscb {
+                background-image: url(img/efsc.png);
+            }
+            
             #panel {
                 position: absolute;
                 /* top: 0; height: 10mm; width: 100%; */
@@ -119,6 +133,7 @@
                 <div id="msg"></div>
                 <input type="button" id="qrrb" value="Kód beolvasása" onclick="read()" />
             </div>
+            <button id="fscb" onclick="fsc(this)"></button>
         </div>
         <div id="qrread" hidden>
             <canvas id="vidcanvas" hidden></canvas>
@@ -129,6 +144,15 @@
             <input type="button" value="Bezár" onclick="stopRead()" />
         </div>
         <script>
+            function fsc(b) {
+                if (document.fullscreen) {
+                    document.exitFullscreen();
+                }
+                else {
+                    document.body.requestFullscreen();
+                }
+            }
+            
             const msgDiv=document.querySelector('#msg');
             function msg(txt) {
                 msgDiv.textContent=txt;
@@ -138,6 +162,7 @@
                     setTimeout("msgDiv.style.animationDuration='';msgDiv.style.animationName=''",1000);
                 }
             }
+            
             const kep=document.querySelector('#kep');
             const keptarto=document.querySelector('#keptarto');
             const rcDiv=document.querySelector('#rc');
