@@ -16,21 +16,29 @@
                 overflow: hidden;
                 background-image: linear-gradient(#9ac3e8, #fff, #45ac3d);
             }
-            #qrrb {
+            #panel {
                 position: absolute;
-                top: 0; height: 10mm; width: 100%;
+                /* top: 0; height: 10mm; width: 100%; */
+                bottom: 0; right: 0; width: 30%;
+                font-size: 7mm;
+                display: flex;
+            }
+            #qrrb {
+                /*position: absolute;
+                 top: 0; height: 10mm; width: 100%; */
+                /*bottom: 0; right: 0;*/ height: 10mm; width: 100%;
                 font-size: 7mm;
             }
             #msg {
-                position: absolute;
-                bottom: 0; height: 10mm; width: 100%;
+                /*position: absolute;
+                bottom: 0; height: 10mm; width: 100%;*/
                 text-align: center;
-                background: lightblue;
-                margin: auto auto auto auto;
+                /*background: lightblue;*/
+                padding: 3mm;
             }
             #keptarto {
                 position: absolute;
-                top: 10mm; bottom: 10mm; width: 100%;
+                top: 0mm; bottom: 0mm; width: 100%;
                 text-align: center;
             }
             #kep {
@@ -56,17 +64,17 @@
             } 
             .icon {
                 position: absolute;
-                width: 10mm;
+                width: 8mm;
                 z-index: 100;
                 transform: translate(-50%,-50%);
+                border-radius: 1mm;
                 cursor: pointer;
             }
-            .icon:hover {
+            /*.icon:hover {
                 border: solid .5mm indigo;
-            }
+            }*/
             .turned .icon {
                 transform: translate(-50%,-50%) rotate(90deg);
-                border-radius: 1mm;
                 /*transform-origin: center center;*/
             }
             .found {
@@ -86,19 +94,30 @@
                 from { border: solid 2mm red; }
                 to { border: none; }
             }
-            
+            @keyframes msgflash {
+                from { background: red; color: #fff; }
+                to { background: none; color: none; }
+            }
+            @media(orientation:portrait) {
+                #panel {
+                    bottom: auto; top: 0; width: auto;
+                    flex-direction: column-reverse;
+                }
+            }
         </style>
     </head>
     <body>
         <div id="content">
-            <input type="button" id="qrrb" value="Kód beolvasása" onclick="read()" />
-            <div id="msg"></div>
             <div id="keptarto">
                 <div id="kep">
                     <img id="fpimg" src="fp.png" />
                     <div id="rc" />
                     <!--div id="icons" /-->
                 </div>
+            </div>
+            <div id="panel">
+                <div id="msg"></div>
+                <input type="button" id="qrrb" value="Kód beolvasása" onclick="read()" />
             </div>
         </div>
         <div id="qrread" hidden>
@@ -114,8 +133,9 @@
             function msg(txt) {
                 msgDiv.textContent=txt;
                 if (txt!='') {
-                    setTimeout("msgDiv.style.background=''",1000);
-                    msgDiv.style.background='pink';
+                    msgDiv.style.animationDuration='2s';
+                    msgDiv.style.animationName='msgflash';
+                    setTimeout("msgDiv.style.animationDuration='';msgDiv.style.animationName=''",1000);
                 }
             }
             const kep=document.querySelector('#kep');
@@ -278,6 +298,7 @@
                     // wrong one found
                     t.style.animationDuration='2s';
                     t.style.animationName='wrong';
+                    setTimeout(function() {t.style.animationDuration='';t.style.animationName=''},1000);
                 }
             }
         </script>
