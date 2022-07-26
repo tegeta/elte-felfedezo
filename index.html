@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="initial-scale=1.0" />        
-        <title></title>
+        <title>Térképész tábor – Ismerd meg a campust</title>
         <script src="jsQR.js"></script>
         <style>
             html, body { 
@@ -32,12 +32,12 @@
             
             #panel {
                 position: absolute;
-                top: 0; right: 0; width: auto; /* max-width: 40%; */
+                top: 0; right: 0; width: auto;
                 font-size: 7mm;
                 display: flex;
                 flex-direction: column;
             }
-            #qrrb {
+            #qrrb, #msg input {
                 height: 10mm; width: 100%;
                 font-size: 7mm;
             }
@@ -109,17 +109,16 @@
                 <div id="kep">
                     <img id="fpimg" src="fp.png" />
                     <div id="rc" />
-                    <!--div id="icons" /-->
                 </div>
             </div>
             <div id="panel">
                 <input type="button" id="qrrb" value="Kód beolvasása" onclick="read()" />
                 <div id="msg"></div>
             </div>
-            <button id="fscb" onclick="fsc(this)"></button>
+            <button id="fscb" title="Teljes képernyő" onclick="fsc(this)"></button>
         </div>
         <div id="qrread" hidden>
-            <canvas id="vidcanvas" hidden></canvas>
+            <canvas id="vidcanvas"></canvas>
             <div id="output" hidden>
                 <div id="outputMessage">Nincs QR kód...</div>
                 <div hidden><span id="outputData"></span></div>
@@ -137,8 +136,14 @@
             }
             
             const msgDiv=document.querySelector('#msg');
-            function msg(txt) {
+            function msg(txt,reload) {
                 msgDiv.textContent=txt;
+                if (reload) {
+                    let b=document.createElement('input');
+                    b.type='button';b.style.display='block';
+                    b.value='Újrakezdés';b.onclick=e=>location.reload();
+                    msgDiv.appendChild(b);
+                }
                 if (txt!='') {
                     msgDiv.style.animationDuration='2s';
                     msgDiv.style.animationName='msgflash';
@@ -151,6 +156,7 @@
             const rcDiv=document.querySelector('#rc');
             const fpimg=document.querySelector('#fpimg');
             const qrread=document.querySelector('#qrread');
+            const qrrb=document.querySelector('#qrrb');
             // set kep's and rotation if necessary. then #rc copies fpimg's size
             function resize() {
                 let ih=innerHeight, iw=innerWidth;
@@ -176,7 +182,7 @@
             }
             window.onresize=resize;
             document.body.onload=resize;
-            //
+            
             let parts=[];
             let cn=document.createElement('canvas');
             cn.width=1302;cn.height=943;
@@ -215,16 +221,11 @@
             }
             img.src='ln.jpg';
 
-            video = document.createElement("video");
-            /*navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
-              vidstream=video.srcObject = stream;
-              video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
-              video.play();
-              
-            });*/
+            const video = document.createElement("video");
             
             function read() {
                 qrread.hidden=false;
+                qrrb.disabled=true;
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
                   vidstream=video.srcObject = stream;
                   video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
@@ -232,14 +233,17 @@
                   
                 });
                 var canvas = document.querySelector('#vidcanvas');
-                var ct=canvas.getContext('2d');
                 var outputContainer = document.getElementById("output");
                 var outputMessage = document.getElementById("outputMessage");
                 var outputData = document.getElementById("outputData");           
             
-                var width = 320;    // We will scale the photo width to this
-                var height = 0;     // This will be computed based on the input stream
-                var streaming = false;
+                var width = 320, height = 240;   
+                
+                canvas.height=height; canvas.width=width;
+                var ct=canvas.getContext('2d');
+                ct.clearRect(0, 0, width, height);
+                ct.textAlign='center'; ct.textBaseline='center'; ct.font='25px sans';
+                ct.fillText('Várakozás a kamera képére....',160,120);
                 
                 requestAnimationFrame(tick);
                 
@@ -255,34 +259,38 @@
                 }
                 function tick() {
                   if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                    canvas.hidden = false;
                     outputContainer.hidden = false;
 
-                    canvas.height = video.videoHeight;
-                    canvas.width = video.videoWidth;
+                    let aspect = video.videoWidth/video.videoHeight;
+                    if (aspect>1) {
+                        canvas.width=320;canvas.height=Math.round(320/aspect);
+                    }
+                    else {
+                        canvas.width=Math.round(320*aspect);canvas.height=320;
+                    }
                     ct.drawImage(video, 0, 0, canvas.width, canvas.height);
                     var imageData = ct.getImageData(0, 0, canvas.width, canvas.height);
                     var code = jsQR(imageData.data, imageData.width, imageData.height, {
-                      inversionAttempts: "dontInvert",
+                        inversionAttempts: "dontInvert",
                     });
                     if (code) {
                         drawBox(code.location);
-                        /*drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
-                        drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
-                        drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
-                        drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");*/
                         outputMessage.hidden = true;
                         outputData.parentElement.hidden = false;
-                        //outputData.innerText = code.data;
                         if (code.data.startsWith('tegetabor')) {
-                            stopRead();
-                            msg('Jelöld meg a térképen, hol vagy most');
                             lerakando=parseInt(code.data.substr(10));
-                            rcDiv.onclick=lerak;
+                            if (parts[lerakando].kesz) {
+                                alert('Ezt már korábban megtaláltad. Keress másik pontot.');                                
+                            }
+                            else {
+                                stopRead();
+                                msg('Jelöld meg a térképen, hol vagy most');
+                                rcDiv.onclick=lerak;
+                            }
                         }
                     } else {
-                      outputMessage.hidden = false;
-                      outputData.parentElement.hidden = true;
+                        outputMessage.hidden = false;
+                        outputData.parentElement.hidden = true;
                     }
                   }
                   requestAnimationFrame(tick);
@@ -291,9 +299,9 @@
             
             function stopRead() {
                 qrread.hidden=true;
-                //video.remove();
                 vidstream.getTracks().forEach(track=>track.stop());                
             }
+            
             function lerak(e) {
                 let t=e.target;
                 if (t.id==lerakando) {
@@ -304,7 +312,16 @@
                     console.log(d);
                     d.style.backgroundImage='url('+parts[lerakando].im+')';
                     rcDiv.onclick=null;
+                    parts[lerakando].kesz=true;
                     msg('');
+                    let cnt=0;
+                    for(let j=0;j<parts.length;j++)
+                        if (parts[j].kesz) cnt++;
+                    if (cnt==parts.length) {
+                        msg('Gratulálunk! Készen vagy!',true);
+                    }
+                    else
+                        qrrb.disabled=false;
                 }
                 else {
                     // wrong one found
