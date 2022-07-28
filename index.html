@@ -195,10 +195,12 @@
                     let rc=d.split('\r\n');
                     for (let i in rc) {
                         c=rc[i].split(',');
+                        if (c.length<4) continue;
                         let l=c[0]/2, t=943-c[3]/2, w=(c[2]-c[0])/2, h=(c[3]-c[1])/2;
                         let d=document.createElement('div');
                         d.className='rect';
-                        d.style.top=t/9.43+'%'; d.style.left=l/13.02+'%'; d.style.width=w/13.02+'%'; d.style.height=h/9.43+'%';
+                        d.style.top=(t/9.43).toFixed(2)+'%'; d.style.left=(l/13.02).toFixed(2)+'%'; 
+                        d.style.width=(w/13.02).toFixed(2)+'%'; d.style.height=(h/9.43).toFixed(2)+'%';
                         d.id='d'+i;
                         rcDiv.appendChild(d);
                         if (c.length>4) {
