@@ -306,6 +306,8 @@
             
             function lerak(e) {
                 let t=e.target;
+                if (!t.src)
+                    return; // not an icon. do nothing                    
                 if (t.id==lerakando) {
                     // found
                     let i=t.id; 
